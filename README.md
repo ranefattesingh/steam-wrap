@@ -1,4 +1,4 @@
-# Steam Wrap API
+# Steam Wrap APP
 
 A read-only **FastAPI** wrapper around the Steam Web API. Send a user's Steam
 access token and get:
@@ -38,13 +38,33 @@ or `pip install -r requirements-dev.txt` (adds pytest, respx, ruff, mypy).
 
 ### Web UI
 
-A Vue frontend in [`frontend/`](frontend/README.md) lists your whole library
-with sorting, genre/tag filtering and grouping. With the API running:
+A Vue frontend in [`frontend/`](frontend/) works with your whole
+library in the browser. Paste a token and click **Find** to get:
+
+* **Search** by name
+* **Sort** by name, playtime, last played or release date
+* **Filter** by one or more genres or tags, matching *any* or *all*
+* **Group** by franchise, genre or developer, with a minimum group size
+* **Details** for each game, including similar games from your library
+
+The UI loads every page of `GET /api/v1/games`, so there is no page-size
+limit. The token stays in memory only, so reloading the page forgets it. It is
+sent as an `Authorization: Bearer` header, never in a URL.
+
+For development, with the API running (`make run`):
 
 ```bash
 make web-install   # pnpm install
 make web           # http://localhost:5173 (proxies /api to :8000)
+make web-build     # type-check + production build into frontend/dist
 ```
+
+To call a different backend, set `VITE_API_BASE_URL` at build time, for
+example `VITE_API_BASE_URL=https://api.example.com pnpm build` in `frontend/`.
+That origin must be allowed by the API's `app.cors_origins`. To serve a build
+locally, run `pnpm preview` in `frontend/`.
+
+To run the UI and the API together in Docker, see [Deployment](#deployment).
 
 Get a token (see [Getting a Steam access token](#getting-a-steam-access-token)
 below) and call the API:
@@ -175,6 +195,12 @@ steam_wrap/
   api/v1/                   routers and dependencies
 tests/                      offline test suite (Steam mocked with respx)
 frontend/                   Vue 3 + Vite + Tailwind + shadcn-vue web UI
+  Dockerfile, nginx.conf    production image: static build served by nginx
+  src/lib/api.ts            typed API client (+ fetchAllGames page walker)
+  src/composables/          useLibrary.ts: token, filters, loading, grouping
+  src/components/           TokenForm, LibraryToolbar, GenrePicker, GameList,
+                            GameDetailDialog
+  src/components/ui/        generated shadcn-vue components
 requirements*.txt           pinned pip exports of pyproject.toml
 docs/                       API reference, architecture, token guide
 ```
@@ -196,16 +222,24 @@ make format    # auto-format
 docker compose up --build        # web UI on :3000, API on :8080
 ```
 
+Then open <http://localhost:3000> for the web UI, or
+<http://localhost:8080/docs> for Swagger UI.
+
 Compose runs two services:
 
-* **api** serves on :8080 with JSON logs and query-token auth disabled.
-* **web** builds the Vue app and serves it with nginx on :3000. nginx also
-  proxies `/api`, `/docs`, `/redoc` and `/openapi.json` to `api`, so the
-  browser only talks to one origin. It starts once the API's health check passes.
+| Service | Host port | What it does |
+|---|---|---|
+| `api` | 8080 | The FastAPI backend (port 8000 inside the container), with JSON logs and query-token auth disabled |
+| `web` | 3000 | The Vue app served by nginx, which also proxies `/api`, `/docs`, `/redoc` and `/openapi.json` to `api` |
 
-The image runs one uvicorn worker as a non-root user and includes a health
-check. The cache is per process, so scale by adding replicas. For a shared
-cache, see the Redis note in ARCHITECTURE.md.
+Because nginx proxies the API, the browser talks to a single origin, so no
+CORS or `VITE_API_BASE_URL` setup is needed. `web` starts once the API's
+health check passes. If the API should only be reachable through the UI,
+remove the `ports:` entry from the `api` service.
+
+The API image runs one uvicorn worker as a non-root user. Both images include
+a health check. The cache is per process, so scale the API by adding
+replicas. For a shared cache, see the Redis note in ARCHITECTURE.md.
 
 ## Limitations
 

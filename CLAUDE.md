@@ -16,7 +16,15 @@ make run         # uvicorn app:app --reload on :8000 (Swagger at /docs)
 make test        # pytest
 make lint        # ruff check + ruff format --check + mypy --strict (steam_wrap, app.py)
 make format      # ruff format + ruff check --fix
+make web         # frontend dev server on :5173 (Vite proxies /api → :8000)
+make web-build   # vue-tsc type-check + vite build
 ```
+
+`requirements.txt` / `requirements-dev.txt` are pinned exports of `pyproject.toml`; regenerate them when dependencies change.
+
+## Frontend (`frontend/`)
+
+Vue 3 + Vite + TypeScript, Tailwind v4, shadcn-vue (reka-ui) components in `src/components/ui` (generated; add more with `pnpm dlx shadcn-vue@latest add <name>`). Use pnpm. `src/lib/api.ts` is the typed API client; `src/composables/useLibrary.ts` holds state. `fetchAllGames` walks every `/games` page at the server's max page size (no client-side limit). Sort/order/genre/match are applied server-side (changing them refetches); name search, grouping (`/groups?min_size=1` intersected with the filtered list) and min group size are client-side. The token is kept in memory only and sent as a Bearer header, never in the URL.
 
 Single test: `.venv/bin/python -m pytest tests/test_api.py::test_name` (or `-k pattern`).
 

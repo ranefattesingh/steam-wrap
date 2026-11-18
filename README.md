@@ -32,6 +32,20 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 .venv/bin/uvicorn app:app --reload
 ```
 
+Or with the pinned exports: `pip install -r requirements.txt` (runtime only)
+or `pip install -r requirements-dev.txt` (adds pytest, respx, ruff, mypy).
+`pyproject.toml` stays the source of truth.
+
+### Web UI
+
+A Vue frontend in [`frontend/`](frontend/README.md) lists your whole library
+with sorting, genre/tag filtering and grouping. With the API running:
+
+```bash
+make web-install   # pnpm install
+make web           # http://localhost:5173 (proxies /api to :8000)
+```
+
 Get a token (see [Getting a Steam access token](#getting-a-steam-access-token)
 below) and call the API:
 
@@ -160,6 +174,8 @@ steam_wrap/
   api/openapi.py            Swagger/OpenAPI description, tags and UI settings
   api/v1/                   routers and dependencies
 tests/                      offline test suite (Steam mocked with respx)
+frontend/                   Vue 3 + Vite + Tailwind + shadcn-vue web UI
+requirements*.txt           pinned pip exports of pyproject.toml
 docs/                       API reference, architecture, token guide
 ```
 
@@ -177,8 +193,15 @@ make format    # auto-format
 ## Deployment
 
 ```bash
-docker compose up --build        # serves on :8000, JSON logs, query-token auth disabled
+docker compose up --build        # web UI on :3000, API on :8080
 ```
+
+Compose runs two services:
+
+* **api** serves on :8080 with JSON logs and query-token auth disabled.
+* **web** builds the Vue app and serves it with nginx on :3000. nginx also
+  proxies `/api`, `/docs`, `/redoc` and `/openapi.json` to `api`, so the
+  browser only talks to one origin. It starts once the API's health check passes.
 
 The image runs one uvicorn worker as a non-root user and includes a health
 check. The cache is per process, so scale by adding replicas. For a shared

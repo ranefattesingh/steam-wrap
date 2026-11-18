@@ -1,0 +1,107 @@
+# =========================================================================== #
+# Steam Wrap configuration
+#
+# Non-secret defaults live here. Every value can be overridden with an
+# environment variable (or a .env file) using the STEAMWRAP_ prefix and "__"
+# as the nested delimiter, e.g.:
+#
+#   STEAMWRAP_APP__LOG_LEVEL=DEBUG
+#   STEAMWRAP_CACHE__LIBRARY_TTL_SECONDS=120
+#   STEAMWRAP_APP__CORS_ORIGINS='["https://example.com"]'
+#
+# Priority (highest first): env vars > .env file > this file > code defaults.
+# Point to a different file with STEAMWRAP_CONFIG_FILE=/path/to/config.yaml
+# =========================================================================== #
+
+app:
+  name: "Steam Wrap API"
+  environment: "development"      # development | staging | production
+  debug: false
+  log_level: "INFO"
+  log_json: false                 # true -> one JSON object per log line (recommended in prod)
+  api_prefix: "/api/v1"
+  cors_origins: ["*"]
+  # Allow ?access_token=... in addition to the Authorization header.
+  # Convenient for quick testing, but tokens in URLs can leak into proxies and
+  # browser history. Disable in production.
+  allow_query_token: true
+  # Serve Swagger UI (/docs), ReDoc (/redoc) and the schema (/openapi.json).
+  docs_enabled: true
+
+steam:
+  api_base_url: "https://api.steampowered.com"
+  store_base_url: "https://store.steampowered.com"
+  asset_base_url: "https://shared.akamai.steamstatic.com/store_item_assets"
+  media_base_url: "https://media.steampowered.com"
+  language: "english"
+  country_code: "US"
+  timeout_seconds: 15
+  max_retries: 3                  # retries on 429 / 5xx / network errors
+  retry_backoff_seconds: 0.5      # exponential: 0.5s, 1s, 2s ...
+  store_batch_size: 50            # appids per IStoreBrowseService/GetItems call
+  store_max_concurrency: 4        # parallel store metadata batches
+  tags_per_game: 20               # how many store tags to fetch per game
+
+cache:
+  max_entries: 20000
+  library_ttl_seconds: 600        # a user's owned-games list (keyed by token hash)
+  store_item_ttl_seconds: 86400   # public per-game store metadata (shared by all users)
+  tag_list_ttl_seconds: 86400     # tag id -> tag name map
+  profile_ttl_seconds: 300
+
+pagination:
+  default_page_size: 50
+  max_page_size: 200
+
+genres:
+  # Steam's official top-level genres. Tags with these names are exposed as a
+  # game's "genres"; every other tag is still available in "tags".
+  primary:
+    - Action
+    - Adventure
+    - Casual
+    - Indie
+    - Massively Multiplayer
+    - Racing
+    - RPG
+    - Simulation
+    - Sports
+    - Strategy
+    - Free to Play
+    - Early Access
+  # Friendly query words -> Steam tag names. Matching is case/punctuation
+  # insensitive. A query not listed here is matched directly against tag names
+  # (so ?genre=open-world matches the "Open World" tag).
+  aliases:
+    shooting: ["Shooter", "FPS", "Third-Person Shooter", "Shoot 'Em Up", "Top-Down Shooter", "Looter Shooter", "Hero Shooter", "Arena Shooter", "Tactical"]
+    shooter: ["Shooter", "FPS", "Third-Person Shooter", "Shoot 'Em Up", "Top-Down Shooter", "Looter Shooter", "Hero Shooter", "Arena Shooter"]
+    fps: ["FPS"]
+    rpg: ["RPG", "Action RPG", "JRPG", "CRPG", "Party-Based RPG", "Turn-Based RPG"]
+    roleplaying: ["RPG", "Action RPG", "JRPG", "CRPG", "Party-Based RPG", "Turn-Based RPG"]
+    racing: ["Racing", "Driving", "Automobile Sim"]
+    horror: ["Horror", "Survival Horror", "Psychological Horror"]
+    strategy: ["Strategy", "RTS", "Turn-Based Strategy", "Grand Strategy", "4X", "Tower Defense"]
+    sports: ["Sports", "Football (Soccer)", "Basketball", "Golf", "Tennis"]
+    puzzle: ["Puzzle", "Puzzle Platformer", "Logic"]
+    platformer: ["Platformer", "2D Platformer", "3D Platformer", "Puzzle Platformer", "Precision Platformer"]
+    multiplayer: ["Multiplayer", "Massively Multiplayer", "Online Co-Op", "PvP"]
+    coop: ["Co-op", "Online Co-Op", "Local Co-Op"]
+    simulation: ["Simulation", "Life Sim", "Farming Sim", "Automobile Sim", "Flight", "Space Sim"]
+    openworld: ["Open World", "Sandbox"]
+    stealth: ["Stealth"]
+    survival: ["Survival", "Survival Horror", "Open World Survival Craft"]
+    fighting: ["Fighting", "2D Fighter", "3D Fighter", "Beat 'em up"]
+
+similarity:
+  default_limit: 10
+  max_limit: 50
+  min_score: 0.2                  # 0..1, candidates below this are dropped
+  top_tags: 15                    # how many of each game's highest-weighted tags to compare
+  weights:                        # normalised automatically; need not sum to 1
+    franchise: 0.40
+    tags: 0.30
+    genres: 0.15
+    developer: 0.10
+    publisher: 0.05
+  # Tags too generic to say anything about similarity.
+  ignored_tags: ["Singleplayer", "Great Soundtrack", "Atmospheric", "Classic", "Masterpiece", "Beautiful", "Free to Play", "Indie", "Early Access"]

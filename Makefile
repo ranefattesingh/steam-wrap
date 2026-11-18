@@ -28,7 +28,16 @@ format: ## Auto-format and auto-fix lint issues
 	$(PY) -m ruff format .
 	$(PY) -m ruff check --fix .
 
+web-install: ## Install frontend dependencies (pnpm)
+	cd frontend && pnpm install
+
+web: ## Run the frontend dev server on :5173 (proxies /api to :8000)
+	cd frontend && pnpm dev
+
+web-build: ## Type-check and build the frontend into frontend/dist
+	cd frontend && pnpm build
+
 docker: ## Build the Docker image
 	docker build -t steam-wrap:latest .
 
-.PHONY: help install run test lint format docker
+.PHONY: help install run test lint format web-install web web-build docker

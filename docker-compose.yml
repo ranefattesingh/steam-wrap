@@ -3,10 +3,20 @@ services:
     build: .
     image: steam-wrap:latest
     ports:
-      - "8000:8000"
+      - "8080:8000"
     env_file:
       - path: .env
         required: false
     environment:
       STEAMWRAP_APP__ALLOW_QUERY_TOKEN: "false"
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    image: steam-wrap-web:latest
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
